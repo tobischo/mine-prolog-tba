@@ -14,7 +14,10 @@ door('fitnessroom','corridorUG').
 door('relaxation room','corridorUG').
 door('sauna','corridorUG').
 door('boiler room','corridorUG').
-%door(X,Y):-door(Y,X).
+
+%so wirds bei amzi gemacht: neue regel, die beide moeglichkeiten checkt
+connection(X,Y):-door(X,Y).
+connection(X,Y):-door(Y,X).
 
 movementRule('relaxation room','corridorUG'):-inventory([keyA]).
 
