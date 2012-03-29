@@ -4,7 +4,8 @@
 init:-initItems;initText.
 
 %start text
-initText:-write('You are exploring an old mine.'),nl,write('A sudden tremor occured and some rocks are falling down.'),nl,
+initText:-write('You are exploring an old mine.'),nl,
+  write('A sudden tremor occured and some rocks are falling down.'),nl,
   write('You are heading for the exit.'),nl,nl,
   write('It is blocked.'),nl,printPos.
 
@@ -22,12 +23,24 @@ initItems:-asserta(inventory(flashlight)),
   asserta(contains(fuseCord,chamberB)),
   asserta(contains(fuse,chamberA)).
 
+%recursive contains
+recContains(X,Y):-contains(X,Y)->true;contains(X,Z),contains(Z,Y)->true;false.
+
 %combinable items
 combinable(dynamite,fuseCord).
 combinable(fuse,fuseCord).
 
+bothWayCombinable(X,Y):-combinable(X,Y).
+bothWayCombinable(X,Y):-combinable(Y,X).
+
+combine(X,Y):-bothWayCombinable(X,Y),inventory(X),inventory(Y),asserta(combination(X,Y)).
+
+takeable(fuse).
+takeable(fuseCord).
+takeable(dynamite).
+
 %take action
-take(X):-retract(contains(X,Y)),asserta(inventory(X)),printTaken(X,Y).
+take(X):-takeable(X)->position(Z),recContains(X,Z),retract(contains(X,Y)),asserta(inventory(X)),printTaken(X,Y);write('You can not take '),write(X).
 
 %look around
 lookAround:-position(X),viewable(X,Y),writeln('You can see:'),writeln(Y).
@@ -73,4 +86,4 @@ mvR(X,Y):-movementRule(Y,X).
 go_to(X):-position(Y),mvR(X,Y)->retract(position(Y)),asserta(position(X)),printPos;write('Can not move to '),write(X),false.
 
 %initialize Game
-startGame:-asserta(position(tunnelPartA)),asserta(unblocked(nothing)),init.
+startGame:-asserta(position(tunnelPartA)),init,asserta(unblocked(nothing)).
