@@ -77,9 +77,9 @@ initItems:-asserta(contains(flashlight,inventory)),
   asserta(contains(box,gold_vein_chamber)),
   asserta(contains(dynamite,box)),
   asserta(contains(pickaxe,gold_vein_chamber)),
-  asserta(contains(fuse,silver_vein_chamb)),
-  asserta(contains(mine_chariot,silver_vein_chamb)),
-  asserta(contains(helmet,silver_vein_chamb)),
+  asserta(contains(fuse,silver_vein_chamber)),
+  asserta(contains(mine_chariot,silver_vein_chamber)),
+  asserta(contains(helmet,silver_vein_chamber)),
   asserta(contains(pouch,tunnel4)),
   asserta(contains(goldnugget,pouch)),
   asserta(contains(key,pouch)),
@@ -148,7 +148,7 @@ take(X):-position(Z),take_from_any(X,Z)->true:true.
 take_from_any(X,inventory):-writeln('Cannot take something which is already in the inventory!'),!.
 take_from_any(X,_):-not(object(X)),write(X),writeln(' is not a valid object!'),!.
 take_from_any(X,_):-not(takeable(X)),write(X),writeln(' cannot be carried around!'),!.
-take_from_any(X,Z):-not(contains(X,Z)),write(X),write(' not found at '),write(Z),write('!'),!.
+take_from_any(X,Z):-not(contains(X,Z)),write(X),write(' not found at '),write(Z),writeln('!'),!.
 take_from_any(X,Z):-object_store(Z),retract(contains(X,Z)),add_to_inventory(X).
 
 %put something back
@@ -160,7 +160,7 @@ printViewableObjects:-position(X),contains(Y,X),tab,writeln(Y),fail.
 
 %examine objects
 examine(Y):-position(X),contains(Y,X),contains(Z,Y),write(Y),write(' contains '),write(Z),nl.
-examine(Y):-inventory(Y),contains(X,Y),write(X),write(' contains '),write(Y),nl.
+examine(Y):-inventory(Y),contains(X,Y),write(Y),write(' contains '),write(X),nl.
 examine_object(Y):-examine(Y)->true;writeln('Nothing found.').
 
 %two way connections
@@ -289,7 +289,7 @@ command([move,R]):-writeln('Not implemented yet.').
 command([enter,code,R]):-writeln('Not implemented yet.').
 
 %combine objects
-command([combina,A,B]):-writeln('Not implemented yet.').
+command([combine,A,B]):-writeln('Not implemented yet.').
 
 %examine something
 command([examine,R]):-examine_object(R).
