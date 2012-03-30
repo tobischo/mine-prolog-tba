@@ -1,7 +1,7 @@
 %(c) David Hildenbrand, Tobias Schoknecht
 
 %init
-init:-initItems;initText.
+init:-initItems,initText.
 
 %start text
 initText:-write('You are exploring an old mine.'),nl,
@@ -35,6 +35,9 @@ bothWayCombinable(X,Y):-combinable(Y,X).
 
 combine(X,Y):-bothWayCombinable(X,Y),inventory(X),inventory(Y),asserta(combination(X,Y)).
 
+checkCombination(X,Y):-combination(X,Y).
+checkCombination(X,Y):-combination(Y,X).
+
 takeable(fuse).
 takeable(fuseCord).
 takeable(dynamite).
@@ -42,14 +45,16 @@ takeable(dynamite).
 %take action
 take(X):-takeable(X)->position(Z),recContains(X,Z),retract(contains(X,Y)),asserta(inventory(X)),printTaken(X,Y);write('You can not take '),write(X).
 
+put(X):-position(Here),checkCombination(X,Y),checkCombination(Y,Z),asserta(contains(X,Here)),retract(inventory(X)),asserta(contains(Y,Here)),retract(inventory(Y)),asserta(contains(Z,Here)),retract(inventory(Z)).
+
 %look around
-lookAround:-position(X),viewable(X,Y),writeln('You can see:'),writeln(Y).
+lookAround:-position(X),viewable(X,Y)->writeln('You can see:'),writeln(Y);writeln('There is nothing here').
 
 %viewable
 viewable(X,Y):-contains(Y,X).
 
 %examine
-examine(Y):-position(X),viewable(X,Y),viewable(Y,Z),write(Z).
+examine(Y):-position(X),viewable(X,Y),viewable(Y,Z),write(Y),write(' contains '),write(Z).
 
 %general location definition
 location(exit).
@@ -75,15 +80,14 @@ connection(X,Y):-simpleConn(X,Y).
 connection(X,Y):-simpleConn(Y,X).
 
 %movement rules
-movementRule(tunnelPartA,exit):-unblocked(exit).
-movementRule(X,Y).
+movementRule(tunnelPartA,exit):-blocked(exit),false.
 
 %two way movement rules
 mvR(X,Y):-movementRule(X,Y).
 mvR(X,Y):-movementRule(Y,X).
 
 %move action
-go_to(X):-position(Y),mvR(X,Y)->retract(position(Y)),asserta(position(X)),printPos;write('Can not move to '),write(X),false.
+goto(X):-position(Y),location(X),connection(X,Y),mvR(X,Y)->retract(position(Y)),asserta(position(X)),printPos,true;write('Can not move to '),write(X),false.
 
 %initialize Game
-startGame:-asserta(position(tunnelPartA)),init,asserta(unblocked(nothing)).
+startGame:-asserta(position(tunnelPartA)),asserta(blocked(exit)),init.
