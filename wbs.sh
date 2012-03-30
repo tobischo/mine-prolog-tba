@@ -1,2 +1,2 @@
 #/bin/bash
-swipl -l mine.pl -g startGame
+swipl -f mine.pl -t startGame
