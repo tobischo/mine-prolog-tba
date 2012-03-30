@@ -10,18 +10,18 @@ initText:-write('You are exploring an old mine.'),nl,
   write('It is blocked.'),nl,printPos->true;true.
 
 %print messages
-printPos:-position(X),write('You are in '),write(X),write('.'),nl,printPossiblePaths.
+printPos:-position(X),write('You are in '),write(X),write('.'),nl,printPossiblePaths->true;true.
 
-printPossiblePaths:-position(X),writeln('You can go to the following areas: '),connection(X,Y),writeln(Y),fail.
+printPossiblePaths:-position(X),writeln('You can go to the following areas: '),connection(X,Y),tab,writeln(Y),fail.
 
 printTaken(X,Y):-write('Took '),write(X),write(' from '),write(Y).
 
 %initialize items
 initItems:-asserta(inventory(flashlight)),
-  asserta(contains(dynamite,boxA)),
-  asserta(contains(boxA,chamberC)),
-  asserta(contains(fuseCord,chamberB)),
-  asserta(contains(fuse,chamberA)).
+  asserta(contains(dynamite,box1)),
+  asserta(contains(box1,chamber3)),
+  asserta(contains(fuseCord,chamber2)),
+  asserta(contains(fuse,chamber1)).
 
 %recursive contains
 recContains(X,Y):-contains(X,Y)->true;contains(X,Z),contains(Z,Y)->true;false.
@@ -43,57 +43,68 @@ takeable(fuseCord).
 takeable(dynamite).
 
 %take action
-take(X):-takeable(X)->position(Z),recContains(X,Z),retract(contains(X,Y)),asserta(inventory(X)),printTaken(X,Y);write('You can not take '),write(X).
+take(X):-takeable(X)->position(Z),recContains(X,Z),retract(contains(X,Y)),asserta(inventory(X)),printTaken(X,Y);write('You cannot take '),write(X).
 
 put(X):-position(Here),checkCombination(X,Y),checkCombination(Y,Z),asserta(contains(X,Here)),retract(inventory(X)),asserta(contains(Y,Here)),retract(inventory(Y)),asserta(contains(Z,Here)),retract(inventory(Z)).
 
 %look around
-lookAround:-position(X),viewable(X,Y)->writeln('You can see:'),writeln(Y);writeln('There is nothing here').
+lookAround:-position(X),contains(Y,X)->writeln('You can see:'),tab,writeln(Y);writeln('There is nothing here.'),true.
 
-%viewable
-viewable(X,Y):-contains(Y,X).
-
-%examine
-examine(Y):-position(X),viewable(X,Y),viewable(Y,Z),write(Y),write(' contains '),write(Z).
+%examine objects
+examine(Y):-position(X),contains(Y,X),contains(Z,Y),write(Y),write(' contains '),write(Z),nl.
+examine(Y):-inventory(Y),contains(X,Y),write(X),write(' contains '),write(Y),nl.
+examine_object(Y):-examine(Y)->true;writeln('Nothing found.').
 
 %general location definition
 location(exit).
-location(tunnelPartA).
-location(tunnelPartB).
-location(tunnelPartC).
-location(tunnelPartD).
-location(chamberA).
-location(chamberB).
-location(chamberC).
+location(tunnel1).
+location(tunnel2).
+location(tunnel3).
+location(tunnel4).
+location(chamber1).
+location(chamber2).
+location(chamber3).
 
 %connections between locations
-simpleConn(exit,tunnelPartA).
-simpleConn(tunnelPartA,tunnelPartB).
-simpleConn(tunnelPartA,chamberA).
-simpleConn(tunnelPartB,chamberB).
-simpleConn(tunnelPartB,chamberC).
-simpleConn(tunnelPartB,tunnelPartC).
-simpleConn(tunnelPartC,tunnelPartD).
+simpleConn(exit,tunnel1).
+simpleConn(tunnel1,tunnel2).
+simpleConn(tunnel1,chamber1).
+simpleConn(tunnel2,chamber2).
+simpleConn(tunnel2,chamber3).
+simpleConn(tunnel2,tunnel3).
+simpleConn(tunnel3,tunnel4).
 
 %two way connections
 connection(X,Y):-simpleConn(X,Y).
 connection(X,Y):-simpleConn(Y,X).
 
+%two way block check
+way_blocked(X,Y):-blocked(X,Y).
+way_blocked(X,Y):-blocked(Y,X).
+
 %movement rules
-movementRule(tunnelPartA,exit):-blocked(exit),false.
+movementRule(X,Y):-not(way_blocked(X,Y)).
+movementRule(X,Y):-way_blocked(X,Y),blocked_reason(X,Y),fail.
+
+%detailed block reason
+blocked_reason(tunnel1,exit):-writeln('The way is blocked. You can smell the fresh air streaming in the tunnel. Find a way to remove the stones.'),writeln('You shall not pass!').
 
 %two way movement rules
 mvR(X,Y):-movementRule(X,Y).
 mvR(X,Y):-movementRule(Y,X).
 
+single_move(X,Y):-connection(X,Y),mvR(X,Y),writeln('changing the room'),retract(position(Y)),asserta(position(X)).
+
 %move action
-goto(X):-position(Y),location(X),connection(X,Y),mvR(X,Y)->retract(position(Y)),asserta(position(X)),printPos,true;write('Can not move to '),write(X),false.
+goto(X):-not(location(X)),write(X),writeln(' is not a valid location.').
+goto(X):-location(X),position(Y),not(connection(X,Y)),write('You cannot go to '),write(X),writeln(' directly.').
+goto(X):-location(X),position(Y),single_move(X,Y),printPos.
 
 %initialize Game
-startGame:-asserta(game_state(started)),asserta(position(tunnelPartA)),asserta(blocked(exit)),init,startInteractiveMode.
+startGame:-asserta(game_state(started)),asserta(position(chamber3)),asserta(blocked(tunnel1,exit)),init,startInteractiveMode.
 
 %restart the game
-restartGame:-retract(game_state(_)),retract(position(_)),retract(blocked(_)),retract(inventory(_)),retract(contains(_,_)),startGame.
+restartGame:-retract(game_state(_)),retract(position(_)),retract(blocked(_,_)),retract(inventory(_)),retract(contains(_,_)),startGame.
 
 %main loop
 startInteractiveMode:-repeat,read_command(Y),process_command(Y),game_state(finished),print_end_message,halt.
@@ -152,6 +163,7 @@ command([help]):-writeln('Available commands are:'),
 			tab,writeln('"end" - End the game'),
 			tab,writeln('"go to X" - Go to position X'),
 			tab,writeln('"where am I" - Where the hell are you?'),
+      tab,writeln('"look around" - Take a look around.'),
 			tab,writeln('"reload" - Reload the file (debugging purpose)'),
 			tab,writeln('"restart" - Restart the game'),
 			tab,writeln('"take X" - Take something'),
@@ -165,6 +177,9 @@ command([go|[to,R]]):-goto(R)->true;true.
 
 %display location information
 command([where,am,i]):-printPos.
+                      
+%take a look around
+command([look,around]):-lookAround.
 
 %take something
 command([take,R]):-writeln('Not implemented yet.').
@@ -185,7 +200,7 @@ command([enter,code,R]):-writeln('Not implemented yet.').
 command([combina,A,B]):-writeln('Not implemented yet.').
 
 %examine something
-command([examine,R]):-writeln('Not implemented yet.').
+command([examine,R]):-examine_object(R).
 
 tab:-writef('\t').
 print_end_message:-writeln('End of game. Thank you for playing!').
