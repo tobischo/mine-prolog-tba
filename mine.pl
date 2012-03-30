@@ -18,6 +18,8 @@ object(key).
 object(shovel).
 object(bunch_of_rocks).
 object(railway_switch).
+object(usable_fuse).
+object(dynamite_with_fuse).
 
 %general location definition
 location(exit).
@@ -38,11 +40,40 @@ simpleConn(tunnel2,gold_vein_chamber).
 simpleConn(tunnel2,tunnel3).
 simpleConn(tunnel3,tunnel4).
 
+%takeable items
+takeable(fuse).
+takeable(fuse_cord).
+takeable(usable_fuse).
+takeable(dynamite_with_fuse).
+takeable(map).
+takeable(flashlight).
+takeable(pickaxe).
+takeable(dynamite).
+takeable(helmet).
+takeable(pouch).
+takeable(goldnuggets).
+takeable(key).
+takeable(shovel).
+
+%combinable items
+combinable(dynamite,usable_fuse,dynamite_with_fuse).
+combinable(fuse,fuse_cord,usable_fuse).
+bothWayCombinable(X,Y,Z):-combinable(X,Y,Z),!.
+bothWayCombinable(X,Y,Z):-combinable(Y,X,Z).
+
+%object stores are objects,locations an inventory
+object_store(inventory).
+object_store(X):-object(X).
+object_store(X):-location(X).
+
+%init basic game info
+initBasic:-asserta(game_state(started)),asserta(position(tunnel4)),asserta(blocked(tunnel1,exit)).
+
 %initialize items
-initItems:-asserta(inventory(flashlight)),
+initItems:-asserta(contains(flashlight,inventory)),
   asserta(contains(fuse_cord,break_chamber)),
   asserta(contains(desk,break_chamber)),
-  asserta(contains(map,desk)),
+  asserta(contains(map,tunnel4)),%todo restore to desk
   asserta(contains(box,gold_vein_chamber)),
   asserta(contains(dynamite,box)),
   asserta(contains(pickaxe,gold_vein_chamber)),
@@ -56,33 +87,21 @@ initItems:-asserta(inventory(flashlight)),
   asserta(contains(bunch_of_rocks,tunnel3)),
   asserta(contains(railway_switch,tunnel2)).
 
-%takeable items
-takeable(fuse).
-takeable(fuse_cord).
-takeable(map).
-takeable(flashlight).
-takeable(pickaxe).
-takeable(dynamite).
-takeable(helmet).
-takeable(pouch).
-takeable(goldnuggets).
-takeable(key).
-takeable(shovel).
+%easy access to the inventory
+inventory(X):-contains(X,inventory).
+add_to_inventory(X):-asserta(contains(X,inventory)).
+remove_from_inventory(X):-retract(contains(X,inventory)).
+print_inventory:-inventory(X)->(writeln('Your inventory contains:'),print_inventory_list;!);writeln('Your inventory is empty.').
+print_inventory_list:-inventory(X),tab,writeln(X),fail.
 
-%combinable items
-combinable(dynamite,fuseCord).
-combinable(fuse,fuseCord).
-
-bothWayCombinable(X,Y):-combinable(X,Y).
-bothWayCombinable(X,Y):-combinable(Y,X).
-
-combine(X,Y):-bothWayCombinable(X,Y),inventory(X),inventory(Y),asserta(combination(X,Y)).
+%combine two items and add the result to the inventar
+combine(X,Y):-inventory(X),inventory(Y),bothWayCombinable(X,Y,Z),asserta(combination(Z,inventory)),retract(X,inventory),retract(Y,inventory).
 
 checkCombination(X,Y):-combination(X,Y).
 checkCombination(X,Y):-combination(Y,X).
 
-%draw map
-drawmap:-writeln('   /--------------|--------------------------|------'),
+%print map
+printMap:-writeln('   /--------------|--------------------------|------'),
 writeln('  / break_chamber |      tunnel1             | exit'),
 writeln('  |         /-----|------------/   /---------|------'),
 writeln('  |        /                  /   /'),
@@ -105,7 +124,7 @@ writeln('       \\---/').
 
 
 %init
-init:-initItems,initText.
+init:-initBasic,initItems,initText.
 
 %start text
 initText:-write('You are exploring an old mine.'),nl,
@@ -113,9 +132,8 @@ initText:-write('You are exploring an old mine.'),nl,
   write('You are heading for the exit.'),nl,nl,
   write('It is blocked.'),nl,printPos->true;true.
 
-%print messages
+%print position and possible ways
 printPos:-position(X),write('You are in '),write(X),write('.'),nl,printPossiblePaths->true;true.
-
 printPossiblePaths:-position(X),writeln('You can go to the following areas: '),connection(X,Y),tab,writeln(Y),fail.
 
 printTaken(X,Y):-write('Took '),write(X),write(' from '),write(Y).
@@ -123,20 +141,27 @@ printTaken(X,Y):-write('Took '),write(X),write(' from '),write(Y).
 %recursive contains
 recContains(X,Y):-contains(X,Y)->true;contains(X,Z),contains(Z,Y)->true;false.
 
-%take action
-take(X):-takeable(X)->position(Z),recContains(X,Z),retract(contains(X,Y)),asserta(inventory(X)),printTaken(X,Y);write('You cannot take '),write(X).
+%take from current position
+take(X):-position(Z),take_from_any(X,Z)->true:true.
 
-put(X):-position(Here),checkCombination(X,Y),checkCombination(Y,Z),asserta(contains(X,Here)),retract(inventory(X)),asserta(contains(Y,Here)),retract(inventory(Y)),asserta(contains(Z,Here)),retract(inventory(Z)).
+%take from any object store except the inventory 
+take_from_any(X,inventory):-writeln('Cannot take something which is already in the inventory!'),!.
+take_from_any(X,_):-not(object(X)),write(X),writeln(' is not a valid object!'),!.
+take_from_any(X,_):-not(takeable(X)),write(X),writeln(' cannot be carried around!'),!.
+take_from_any(X,Z):-not(contains(X,Z)),write(X),write(' not found at '),write(Z),write('!'),!.
+take_from_any(X,Z):-object_store(Z),retract(contains(X,Z)),add_to_inventory(X).
+
+%put something back
+%put(X):-position(Here),checkCombination(X,Y),checkCombination(Y,Z),asserta(contains(X,Here)),retract(inventory(X)),asserta(contains(Y,Here)),retract(inventory(Y)),asserta(contains(Z,Here)),retract(inventory(Z)).
 
 %look around
-lookAround:-position(X),contains(Y,X)->writeln('You can see:'),tab,writeln(Y);writeln('There is nothing here.'),true.
+lookAround:-position(X),contains(Y,X)->writeln('You can see:'),printViewableObjects;writeln('Nothing in here!'),true.
+printViewableObjects:-position(X),contains(Y,X),tab,writeln(Y),fail.
 
 %examine objects
 examine(Y):-position(X),contains(Y,X),contains(Z,Y),write(Y),write(' contains '),write(Z),nl.
 examine(Y):-inventory(Y),contains(X,Y),write(X),write(' contains '),write(Y),nl.
 examine_object(Y):-examine(Y)->true;writeln('Nothing found.').
-
-
 
 %two way connections
 connection(X,Y):-simpleConn(X,Y).
@@ -165,10 +190,10 @@ goto(X):-location(X),position(Y),not(connection(X,Y)),write('You cannot go to ')
 goto(X):-location(X),position(Y),single_move(X,Y),printPos.
 
 %initialize Game
-startGame:-asserta(game_state(started)),asserta(position(chamber3)),asserta(blocked(tunnel1,exit)),init,startInteractiveMode.
+startGame:-init,startInteractiveMode.
 
 %restart the game
-restartGame:-retract(game_state(_)),retract(position(_)),retract(blocked(_,_)),retract(inventory(_)),retract(contains(_,_)),startGame.
+restartGame:-retract(game_state(_)),retract(position(_)),retract(blocked(_,_)),retract(contains(_,_)),startGame.
 
 %main loop
 startInteractiveMode:-repeat,read_command(Y),process_command(Y),game_state(finished),print_end_message,halt.
@@ -236,17 +261,20 @@ command([help]):-writeln('Available commands are:'),
 			tab,writeln('"combine X Y" - Combine two things creating a third one.'),
 			tab,writeln('"move X" - Move something.'),
 			tab,writeln('"enter code X" - Enter the code.'),
-			tab,writeln('"examine X" - Examine an object.').
+			tab,writeln('"examine X" - Examine an object.'),
+      tab,writeln('"show map" - Display the map.'),
+      tab,writeln('"show inventoy" - Display the inventory.').
 command([go|[to,R]]):-goto(R)->true;true.
 
 %display location information
 command([where,am,i]):-printPos.
                       
 %take a look around
-command([look,around]):-lookAround.
+command([look,around]):-lookAround->true;true.
 
 %take something
-command([take,R]):-writeln('Not implemented yet.').
+command([take,R]):-take(R).
+command([take,R,from,Z]):-take_from_any(R,Z);true.
 
 %drop something
 command([drop,R]):-writeln('Not implemented yet.').
@@ -265,6 +293,16 @@ command([combina,A,B]):-writeln('Not implemented yet.').
 
 %examine something
 command([examine,R]):-examine_object(R).
+
+%show the map
+command([map]):-command([show,map]).
+command([show,map]):-inventory(map)->printMap;writeln('Hard to show a non-existing map. Use your imagination!'),true.
+
+%show the inventory
+command(['inventory']):-command([show,'inventory']).
+command([show,'inventory']):-print_inventory.
+
+
 
 tab:-writef('\t').
 print_end_message:-writeln('End of game. Thank you for playing!').
