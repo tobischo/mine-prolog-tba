@@ -1,5 +1,109 @@
 %(c) David Hildenbrand, Tobias Schoknecht
 
+%static configuration data
+%general object information
+object(fuse_cord).
+object(desk).
+object(map).
+object(flashlight).
+object(box).
+object(dynamite).
+object(pickaxe).
+object(fuse).
+object(mine_chariot).
+object(helmet).
+object(pouch).
+object(goldnugget).
+object(key).
+object(shovel).
+object(bunch_of_rocks).
+object(railway_switch).
+
+%general location definition
+location(exit).
+location(tunnel1).
+location(tunnel2).
+location(tunnel3).
+location(tunnel4).
+location(break_chamber).
+location(gold_vein_chamber).
+location(silver_vein_chamber).
+
+%connections between locations
+simpleConn(exit,tunnel1).
+simpleConn(tunnel1,tunnel2).
+simpleConn(tunnel1,break_chamber).
+simpleConn(tunnel2,silver_vein_chamber).
+simpleConn(tunnel2,gold_vein_chamber).
+simpleConn(tunnel2,tunnel3).
+simpleConn(tunnel3,tunnel4).
+
+%initialize items
+initItems:-asserta(inventory(flashlight)),
+  asserta(contains(fuse_cord,break_chamber)),
+  asserta(contains(desk,break_chamber)),
+  asserta(contains(map,desk)),
+  asserta(contains(box,gold_vein_chamber)),
+  asserta(contains(dynamite,box)),
+  asserta(contains(pickaxe,gold_vein_chamber)),
+  asserta(contains(fuse,silver_vein_chamb)),
+  asserta(contains(mine_chariot,silver_vein_chamb)),
+  asserta(contains(helmet,silver_vein_chamb)),
+  asserta(contains(pouch,tunnel4)),
+  asserta(contains(goldnugget,pouch)),
+  asserta(contains(key,pouch)),
+  asserta(contains(shovel,tunnel4)),
+  asserta(contains(bunch_of_rocks,tunnel3)),
+  asserta(contains(railway_switch,tunnel2)).
+
+%takeable items
+takeable(fuse).
+takeable(fuse_cord).
+takeable(map).
+takeable(flashlight).
+takeable(pickaxe).
+takeable(dynamite).
+takeable(helmet).
+takeable(pouch).
+takeable(goldnuggets).
+takeable(key).
+takeable(shovel).
+
+%combinable items
+combinable(dynamite,fuseCord).
+combinable(fuse,fuseCord).
+
+bothWayCombinable(X,Y):-combinable(X,Y).
+bothWayCombinable(X,Y):-combinable(Y,X).
+
+combine(X,Y):-bothWayCombinable(X,Y),inventory(X),inventory(Y),asserta(combination(X,Y)).
+
+checkCombination(X,Y):-combination(X,Y).
+checkCombination(X,Y):-combination(Y,X).
+
+%draw map
+drawmap:-writeln('   /--------------|--------------------------|------'),
+writeln('  / break_chamber |      tunnel1             | exit'),
+writeln('  |         /-----|------------/   /---------|------'),
+writeln('  |        /                  /   /'),
+writeln('  \\-------/                  /---/'),
+writeln('                            /   /'),
+writeln(' /------------------|------/    |'),
+writeln('/ gold_vein_chamber | tunnel2   \\'),
+writeln('|              /----|---/   /\\   \\'),
+writeln('\\-------------/        /   /  \\   \\'),
+writeln('                      /---/    \\---\\'),
+writeln('                     /   /      \\   \\-------\\'),
+writeln('                    /   /        |           \\--------\\'),
+writeln('           tunnel3--|-  |        | silver_vein_chamber \\'),
+writeln('                    |   |        |                     |'),
+writeln('                    /   /        \\                     /'),
+writeln('       /-----------/---/          \\-------------------/'),
+writeln('       |  tunnel4     /'),
+writeln('       |   /---------/'),
+writeln('       \\---/').
+
+
 %init
 init:-initItems,initText.
 
@@ -16,31 +120,8 @@ printPossiblePaths:-position(X),writeln('You can go to the following areas: '),c
 
 printTaken(X,Y):-write('Took '),write(X),write(' from '),write(Y).
 
-%initialize items
-initItems:-asserta(inventory(flashlight)),
-  asserta(contains(dynamite,box1)),
-  asserta(contains(box1,chamber3)),
-  asserta(contains(fuseCord,chamber2)),
-  asserta(contains(fuse,chamber1)).
-
 %recursive contains
 recContains(X,Y):-contains(X,Y)->true;contains(X,Z),contains(Z,Y)->true;false.
-
-%combinable items
-combinable(dynamite,fuseCord).
-combinable(fuse,fuseCord).
-
-bothWayCombinable(X,Y):-combinable(X,Y).
-bothWayCombinable(X,Y):-combinable(Y,X).
-
-combine(X,Y):-bothWayCombinable(X,Y),inventory(X),inventory(Y),asserta(combination(X,Y)).
-
-checkCombination(X,Y):-combination(X,Y).
-checkCombination(X,Y):-combination(Y,X).
-
-takeable(fuse).
-takeable(fuseCord).
-takeable(dynamite).
 
 %take action
 take(X):-takeable(X)->position(Z),recContains(X,Z),retract(contains(X,Y)),asserta(inventory(X)),printTaken(X,Y);write('You cannot take '),write(X).
@@ -55,24 +136,7 @@ examine(Y):-position(X),contains(Y,X),contains(Z,Y),write(Y),write(' contains ')
 examine(Y):-inventory(Y),contains(X,Y),write(X),write(' contains '),write(Y),nl.
 examine_object(Y):-examine(Y)->true;writeln('Nothing found.').
 
-%general location definition
-location(exit).
-location(tunnel1).
-location(tunnel2).
-location(tunnel3).
-location(tunnel4).
-location(chamber1).
-location(chamber2).
-location(chamber3).
 
-%connections between locations
-simpleConn(exit,tunnel1).
-simpleConn(tunnel1,tunnel2).
-simpleConn(tunnel1,chamber1).
-simpleConn(tunnel2,chamber2).
-simpleConn(tunnel2,chamber3).
-simpleConn(tunnel2,tunnel3).
-simpleConn(tunnel3,tunnel4).
 
 %two way connections
 connection(X,Y):-simpleConn(X,Y).
