@@ -77,9 +77,9 @@ initItems:-asserta(contains(flashlight,inventory)),
   asserta(contains(box,gold_vein_chamber)),
   asserta(contains(dynamite,box)),
   asserta(contains(pickaxe,gold_vein_chamber)),
-  asserta(contains(fuse,silver_vein_chamb)),
-  asserta(contains(mine_chariot,silver_vein_chamb)),
-  asserta(contains(helmet,silver_vein_chamb)),
+  asserta(contains(fuse,silver_vein_chamber)),
+  asserta(contains(mine_chariot,silver_vein_chamber)),
+  asserta(contains(helmet,silver_vein_chamber)),
   asserta(contains(pouch,tunnel4)),
   asserta(contains(goldnugget,pouch)),
   asserta(contains(key,pouch)),
@@ -153,7 +153,6 @@ take_from_any(X,Z):-object(Z),retract(contains(X,Z)),add_to_inventory(X),write(X
 take_from_any(X,Z):-position(Z),retract(contains(X,Z)),add_to_inventory(X),write(X),writeln('Added to inventory.'),!.
 take_from_any(X,Z):-write(X),writeln(' is not reachable from here!'),!.
 
-
 %put something back
 %put(X):-position(Here),checkCombination(X,Y),checkCombination(Y,Z),asserta(contains(X,Here)),retract(inventory(X)),asserta(contains(Y,Here)),retract(inventory(Y)),asserta(contains(Z,Here)),retract(inventory(Z)).
 
@@ -163,7 +162,7 @@ printViewableObjects:-position(X),contains(Y,X),tab,writeln(Y),fail.
 
 %examine objects
 examine(Y):-position(X),contains(Y,X),contains(Z,Y),write(Y),write(' contains '),write(Z),nl.
-examine(Y):-inventory(Y),contains(X,Y),write(X),write(' contains '),write(Y),nl.
+examine(Y):-inventory(Y),contains(X,Y),write(Y),write(' contains '),write(X),nl.
 examine_object(Y):-examine(Y)->true;writeln('Nothing found.').
 
 %two way connections
@@ -292,7 +291,7 @@ command([move,R]):-writeln('Not implemented yet.').
 command([enter,code,R]):-writeln('Not implemented yet.').
 
 %combine objects
-command([combina,A,B]):-writeln('Not implemented yet.').
+command([combine,A,B]):-writeln('Not implemented yet.').
 
 %examine something
 command([examine,R]):-examine_object(R).
