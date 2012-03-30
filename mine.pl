@@ -21,6 +21,11 @@ object(railway_switch).
 object(usable_fuse).
 object(dynamite_with_fuse).
 
+%objects that can contain another object
+container(desk).
+container(box).
+container(pouch).
+
 %general location definition
 location(exit).
 location(tunnel1).
@@ -61,9 +66,9 @@ combinable(fuse,fuse_cord,usable_fuse).
 bothWayCombinable(X,Y,Z):-combinable(X,Y,Z),!.
 bothWayCombinable(X,Y,Z):-combinable(Y,X,Z).
 
-%object stores are objects,locations an inventory
+%object stores are objects,locations and inventory
 object_store(inventory).
-object_store(X):-object(X).
+object_store(X):-container(X).
 object_store(X):-location(X).
 
 %init basic game info
