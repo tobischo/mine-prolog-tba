@@ -154,7 +154,7 @@ take_from_any(X,inventory):-writeln('Cannot take something which is already in t
 take_from_any(X,_):-not(object(X)),write(X),writeln(' is not a valid object!'),!.
 take_from_any(X,_):-not(takeable(X)),write(X),writeln(' cannot be carried around!'),!.
 take_from_any(X,Z):-not(contains(X,Z)),write(X),write(' not found at '),write(Z),writeln('!'),!.
-take_from_any(X,Z):-object(Z),retract(contains(X,Z)),add_to_inventory(X),write(X),writeln(' added to inventory.'),!.
+take_from_any(X,Z):-container(Z),retract(contains(X,Z)),add_to_inventory(X),write(X),writeln(' added to inventory.'),!.
 take_from_any(X,Z):-position(Z),retract(contains(X,Z)),add_to_inventory(X),write(X),writeln(' added to inventory.'),!.
 take_from_any(X,Z):-write(X),writeln(' is not reachable from here!'),!.
 
