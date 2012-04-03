@@ -100,10 +100,7 @@ print_inventory:-inventory(X)->(writeln('Your inventory contains:'),print_invent
 print_inventory_list:-inventory(X),tab,writeln(X),fail.
 
 %combine two items and add the result to the inventar
-combine(X,Y):-inventory(X),inventory(Y),bothWayCombinable(X,Y,Z),asserta(combination(Z,inventory)),retract(X,inventory),retract(Y,inventory).
-
-checkCombination(X,Y):-combination(X,Y).
-checkCombination(X,Y):-combination(Y,X).
+combine(X,Y):-inventory(X),inventory(Y),bothWayCombinable(X,Y,Z),add_to_inventory(Z),remove_from_inventory(X),remove_from_inventory(Y).
 
 %print map
 printMap:-writeln('   /--------------|--------------------------|------'),
@@ -126,7 +123,6 @@ writeln('       /-----------/---/          \\-------------------/'),
 writeln('       |  tunnel4     /'),
 writeln('       |   /---------/'),
 writeln('       \\---/').
-
 
 %init
 init:-initBasic,initItems,initText.
@@ -159,7 +155,22 @@ take_from_any(X,Z):-position(Z),retract(contains(X,Z)),add_to_inventory(X),write
 take_from_any(X,Z):-write(X),writeln(' is not reachable from here!'),!.
 
 %put something back
-%put(X):-position(Here),checkCombination(X,Y),checkCombination(Y,Z),asserta(contains(X,Here)),retract(inventory(X)),asserta(contains(Y,Here)),retract(inventory(Y)),asserta(contains(Z,Here)),retract(inventory(Z)).
+put(X):-position(Z),put_to_any(X,Z)->true:true.
+
+%put to any position or container
+put_to_any(X,inventory):-not(contains(X,inventory)),write(X),writeln(' is not in the inventory.'),!.
+put_to_any(X,Y):-not(container(Y)),write(Y),writeln(' is not a container and cannot hold an object.'),!.
+put_to_any(X,Y):-container(Y),asserta(contains(X,Y)),remove_from_inventory(X),write('Put '),write(X),write(' to '),write(Y),write('.'),!.
+put_to_any(X,Y):-position(Y),asserta(contains(X,Y)),remove_from_inventory(X),write('Put '),write(X),write(' to '),write(Y),write('.'),!.
+put_to_any(X,Y):-write('Cannot place '),write(X),write(' here').
+
+%ignite the dynamite to remove the blockage
+fire:-position(X),not(contains(dynamite_with_fuse,X)),write('Cannot fire the dynamite from the current location.'),!.
+fire:-inventory(dynamite_with_fuse),write('Cannot fire the dynamite while it is still in the inventory.'),!.
+fire:-(inventory(dynamite);inventory(fuse);inventory(fuse_cord))->write('You have to combine dynamite, fuse and fuse_cord first.'),!.
+fire:-position(X),not(way_blocked(X,_)),write('There is no blockage here.'),!.
+fire:-position(X),way_blocked(X,Y),retract(contains(dynamite_with_fuse),X),(retract(blocked(X,Y));retract(blocked(Y,X)))!.
+fire:-write('Cannot fire dynamite.'),!.
 
 %look around
 lookAround:-position(X),contains(Y,X)->writeln('You can see:'),printViewableObjects;writeln('Nothing in here!'),true.
