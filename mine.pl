@@ -100,7 +100,8 @@ print_inventory:-inventory(X)->(writeln('Your inventory contains:'),print_invent
 print_inventory_list:-inventory(X),tab,writeln(X),fail.
 
 %combine two items and add the result to the inventar
-combine(X,Y):-inventory(X),inventory(Y),bothWayCombinable(X,Y,Z),add_to_inventory(Z),remove_from_inventory(X),remove_from_inventory(Y).
+combine(X,Y):-inventory(X),inventory(Y),bothWayCombinable(X,Y,Z),add_to_inventory(Z),remove_from_inventory(X),remove_from_inventory(Y),!.
+combine(X,Y):-(not(inventory(X));not(inventory(Y))),write('Not all necessary items in inventory'),!.
 
 %print map
 printMap:-writeln('   /--------------|--------------------------|------'),
