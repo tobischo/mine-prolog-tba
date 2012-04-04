@@ -60,6 +60,10 @@ takeable(goldnuggets).
 takeable(key).
 takeable(shovel).
 
+%usable items
+usable(dynamite_with_fuse).
+usable(key).
+
 %combinable items
 combinable(dynamite,usable_fuse,dynamite_with_fuse).
 combinable(fuse,fuse_cord,usable_fuse).
@@ -101,7 +105,9 @@ print_inventory_list:-inventory(X),tab,writeln(X),fail.
 
 %combine two items and add the result to the inventar
 combine(X,Y):-inventory(X),inventory(Y),bothWayCombinable(X,Y,Z),add_to_inventory(Z),remove_from_inventory(X),remove_from_inventory(Y),!.
-combine(X,Y):-(not(inventory(X));not(inventory(Y))),write('Not all necessary items in inventory'),!.
+combine(X,Y):-not(inventory(X)),write(X),write('is not in your inventory'),!.
+combine(X,Y):-not(inventory(Y)),write(Y),write('is not in your inventory'),!.
+combine(X,Y):-inventory(X),inventory(Y),not(bothWayCombinable(X,Y,Z)),write('Cannot combine '),write(X),write(' and '),write(Y),!.
 
 %print map
 printMap:-writeln('   /--------------|--------------------------|------'),
@@ -141,7 +147,7 @@ printPossiblePaths:-position(X),writeln('You can go to the following areas: '),c
 printTaken(X,Y):-write('Took '),write(X),write(' from '),write(Y).
 
 %recursive contains
-recContains(X,Y):-contains(X,Y)->true;contains(X,Z),contains(Z,Y)->true;false.
+%recContains(X,Y):-contains(X,Y)->true;contains(X,Z),contains(Z,Y)->true;false.
 
 %take from current position
 take(X):-position(Z),take_from_any(X,Z)->true:true.
@@ -164,6 +170,10 @@ put_to_any(X,Y):-not(container(Y)),write(Y),writeln(' is not a container and can
 put_to_any(X,Y):-container(Y),asserta(contains(X,Y)),remove_from_inventory(X),write('Put '),write(X),write(' to '),write(Y),write('.'),!.
 put_to_any(X,Y):-position(Y),asserta(contains(X,Y)),remove_from_inventory(X),write('Put '),write(X),write(' to '),write(Y),write('.'),!.
 put_to_any(X,Y):-write('Cannot place '),write(X),write(' here').
+
+%use an item
+use(X):-not(usable(X)),write('Cannot use '),write(X),write('.'),!.
+use(X):-not(contains(X,inventory)),write('You do not have '),write(X),write(' in your inventory.'),!.
 
 %ignite the dynamite to remove the blockage
 fire:-position(X),not(contains(dynamite_with_fuse,X)),write('Cannot fire the dynamite from the current location.'),!.
