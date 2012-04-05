@@ -21,11 +21,6 @@ object(railway_switch).
 object(usable_fuse).
 object(dynamite_with_fuse).
 
-%objects that can contain another object
-container(desk).
-container(box).
-container(pouch).
-
 %general location definition
 location(exit).
 location(tunnel1).
@@ -60,19 +55,15 @@ takeable(goldnuggets).
 takeable(key).
 takeable(shovel).
 
-%usable items
-usable(dynamite_with_fuse).
-usable(key).
-
 %combinable items
 combinable(dynamite,usable_fuse,dynamite_with_fuse).
 combinable(fuse,fuse_cord,usable_fuse).
 bothWayCombinable(X,Y,Z):-combinable(X,Y,Z),!.
 bothWayCombinable(X,Y,Z):-combinable(Y,X,Z).
 
-%object stores are containers,locations and inventory
+%object stores are objects,locations an inventory
 object_store(inventory).
-object_store(X):-container(X).
+object_store(X):-object(X).
 object_store(X):-location(X).
 
 %init basic game info
@@ -98,18 +89,16 @@ initItems:-asserta(contains(flashlight,inventory)),
 
 %easy access to the inventory
 inventory(X):-contains(X,inventory).
-add_to_inventory(X):-asserta(contains(X,inventory)),write(X),writeln(' was added to the inventory.').
-remove_from_inventory(X):-retract(contains(X,inventory)),write(X),writeln(' was removed from the inventory.').
-print_inventory:-inventory(_)->(writeln('Your inventory contains:'),print_inventory_list;!);writeln('Your inventory is empty.').
+add_to_inventory(X):-asserta(contains(X,inventory)).
+remove_from_inventory(X):-retract(contains(X,inventory)).
+print_inventory:-inventory(X)->(writeln('Your inventory contains:'),print_inventory_list;!);writeln('Your inventory is empty.').
 print_inventory_list:-inventory(X),tab,writeln(X),fail.
 
 %combine two items and add the result to the inventar
-combine(X,Y):-inventory(X),inventory(Y),bothWayCombinable(X,Y,Z),add_to_inventory(Z),remove_from_inventory(X),remove_from_inventory(Y),!.
-combine(X,Y):-not(object(X)),write(X),write(' is not an object.'),!.
-combine(X,Y):-not(object(Y)),write(Y),write(' is not an object.'),!.
-combine(X,Y):-not(inventory(X)),write(X),write(' is not in your inventory'),!.
-combine(X,Y):-not(inventory(Y)),write(Y),write(' is not in your inventory'),!.
-combine(X,Y):-inventory(X),inventory(Y),not(bothWayCombinable(X,Y,Z)),write('Cannot combine '),write(X),write(' and '),write(Y).
+combine(X,Y):-inventory(X),inventory(Y),bothWayCombinable(X,Y,Z),asserta(combination(Z,inventory)),retract(X,inventory),retract(Y,inventory).
+
+checkCombination(X,Y):-combination(X,Y).
+checkCombination(X,Y):-combination(Y,X).
 
 %print map
 printMap:-writeln('   /--------------|--------------------------|------'),
@@ -133,6 +122,7 @@ writeln('       |  tunnel4     /'),
 writeln('       |   /---------/'),
 writeln('       \\---/').
 
+
 %init
 init:-initBasic,initItems,initText.
 
@@ -146,56 +136,40 @@ initText:-write('You are exploring an old mine.'),nl,
 printPos:-position(X),write('You are in '),write(X),write('.'),nl,printPossiblePaths->true;true.
 printPossiblePaths:-position(X),writeln('You can go to the following areas: '),connection(X,Y),tab,writeln(Y),fail.
 
+printTaken(X,Y):-write('Took '),write(X),write(' from '),write(Y).
+
+%recursive contains
+recContains(X,Y):-contains(X,Y)->true;contains(X,Z),contains(Z,Y)->true;false.
+
 %take from current position
 take(X):-position(Z),take_from_any(X,Z)->true:true.
 
 %take from any object store except the inventory 
 take_from_any(X,inventory):-writeln('Cannot take something which is already in the inventory!'),!.
-take_from_any(_,X):-not(container(Z)),not(location(Z)),write(Z),writeln(' is not a valid place for an object.'),!.
 take_from_any(X,_):-not(object(X)),write(X),writeln(' is not a valid object!'),!.
 take_from_any(X,_):-not(takeable(X)),write(X),writeln(' cannot be carried around!'),!.
-take_from_any(X,Z):-not(contains(X,Z)),write(X),write(' not found at '),write(Z),writeln('!'),!.
-take_from_any(X,Z):-container(Z),retract(contains(X,Z)),add_to_inventory(X),!.
-take_from_any(X,Z):-position(Z),retract(contains(X,Z)),add_to_inventory(X),!.
+<<<<<<< HEAD
+take_from_any(X,Z):-not(contains(X,Z)),write(X),write(' not found at '),write(Z),write('!'),!.
+take_from_any(X,Z):-object(Z),retract(contains(X,Z)),add_to_inventory(X),write(X),writeln('Added to inventory.'),!.
+take_from_any(X,Z):-position(Z),retract(contains(X,Z)),add_to_inventory(X),write(X),writeln('Added to inventory.'),!.
 take_from_any(X,Z):-write(X),writeln(' is not reachable from here!'),!.
 
+=======
+take_from_any(X,Z):-not(contains(X,Z)),write(X),write(' not found at '),write(Z),writeln('!'),!.
+take_from_any(X,Z):-object_store(Z),retract(contains(X,Z)),add_to_inventory(X).
+>>>>>>> d86c42a8ef398af1b73020a86c400f50f1c72bc3
+
 %put something back
-put(X):-position(Z),put_to_any(X,Z)->true:true.
-
-%put to any position or container
-put_to_any(X,inventory):-not(inventory(X)),write(X),writeln(' is not in the inventory.'),!.
-put_to_any(X,Y):-not(container(Y)),not(location(Y)),write(Y),writeln(' is not a valid place for an object.'),!.
-put_to_any(X,Y):-container(Y),position(Z),not(contains(Y,Z)),not(inventory(Y)),writeln('Cannot beam objects to containers which are not around here.'),!.
-put_to_any(X,Y):-container(Y),asserta(contains(X,Y)),remove_from_inventory(X),write('Put '),write(X),write(' to '),write(Y),writeln('.'),!.
-put_to_any(X,Y):-not(position(Y)),writeln('Cannot beam objects to places which are not around.'),!.
-put_to_any(X,Y):-position(Y),asserta(contains(X,Y)),remove_from_inventory(X),write('Put '),write(X),write(' to '),write(Y),writeln('.'),!.
-put_to_any(X,Y):-write('Cannot place '),write(X),writeln(' here').
-
-%use an item which is in the inventory or at the current position
-use(X):-not(object(X)),write(X),writeln(' is not a valid object'),!.
-use(X):-not(usable(X)),write('Cannot use '),write(X),writeln('.'),!.
-use(X):-not(inventory(X)),position(Z),not(contains(X,Z)),write(X),writeln(' is not reachable from here.'),!.
-
-%ignite the dynamite to remove the blockage
-fire:-position(X),not(contains(dynamite_with_fuse,X)),write('Cannot fire the dynamite from the current location.'),!.
-fire:-inventory(dynamite_with_fuse),write('Cannot fire the dynamite while it is still in the inventory.'),!.
-fire:-(inventory(dynamite);inventory(fuse);inventory(fuse_cord))->write('You have to combine dynamite, fuse and fuse_cord first.'),!.
-fire:-position(X),not(way_blocked(X,_)),write('There is no blockage here.'),!.
-fire:-position(X),way_blocked(X,Y),retract(contains(dynamite_with_fuse),X),(retract(blocked(X,Y));retract(blocked(Y,X)))!.
-fire:-write('Cannot fire dynamite.'),!.
+%put(X):-position(Here),checkCombination(X,Y),checkCombination(Y,Z),asserta(contains(X,Here)),retract(inventory(X)),asserta(contains(Y,Here)),retract(inventory(Y)),asserta(contains(Z,Here)),retract(inventory(Z)).
 
 %look around
 lookAround:-position(X),contains(Y,X)->writeln('You can see:'),printViewableObjects;writeln('Nothing in here!'),true.
 printViewableObjects:-position(X),contains(Y,X),tab,writeln(Y),fail.
 
 %examine objects
-examine_object(Y):-not(object(Y)),write(Y),writeln(' is not a valid object.'),!.
-examine_object(Y):-not(inventory(Y)),position(Z),not(contains(Y,Z)),write(Y),writeln(' is not reachable from here.'),!.
-examine_object(Y):-not(container(Y)),write(Y),writeln(' cannot contain anything.'),!.
-examine_object(Y):-contains(_,Y)->write(Y),writeln(' contains the following objects:'),examine(Y);write(Y),writeln(' is empty.').
-examine(Y):-position(X),contains(Y,X),examine_object_list(Y)->true:true.
-examine(Y):-inventory(Y),examine_object_list(Y)->true:true.
-examine_object_list(Y):-contains(Z,Y),tab,writeln(Z),fail.
+examine(Y):-position(X),contains(Y,X),contains(Z,Y),write(Y),write(' contains '),write(Z),nl.
+examine(Y):-inventory(Y),contains(X,Y),write(Y),write(' contains '),write(X),nl.
+examine_object(Y):-examine(Y)->true;writeln('Nothing found.').
 
 %two way connections
 connection(X,Y):-simpleConn(X,Y).
@@ -267,12 +241,6 @@ ignored_word('fuck').
 ignored_word('fuckin').
 ignored_word('fucking').
 ignored_word('and').
-ignored_word('to').
-ignored_word('into').
-ignored_word('onto').
-ignored_word('out').
-ignored_word('of').
-ignored_word('from').
 
 %end the game
 command([stop]):-command([end]).
@@ -296,40 +264,43 @@ command([help]):-writeln('Available commands are:'),
 			tab,writeln('"reload" - Reload the file (debugging purpose)'),
 			tab,writeln('"restart" - Restart the game'),
 			tab,writeln('"take X" - Take something'),
-			tab,writeln('"take X out of Y" - Take something out of something'), 
-      tab,writeln('"put X into Y" - Put something into something.'),
-      tab,writeln('"drop X" - Drop something'),
+			tab,writeln('"drop X" - Drop something'),
 			tab,writeln('"use X" - Use something'),
 			tab,writeln('"combine X Y" - Combine two things creating a third one.'),
+			tab,writeln('"move X" - Move something.'),
+			tab,writeln('"enter code X" - Enter the code.'),
 			tab,writeln('"examine X" - Examine an object.'),
       tab,writeln('"show map" - Display the map.'),
       tab,writeln('"show inventoy" - Display the inventory.').
-command([go|[to,R]]):-goto(R);true.
+command([go|[to,R]]):-goto(R)->true;true.
 
 %display location information
-command([where,am,i]):-printPos;true.
+command([where,am,i]):-printPos.
                       
 %take a look around
-command([look,around]):-lookAround;true.
+command([look,around]):-lookAround->true;true.
 
 %take something
-command([take,R]):-take(R);true.
-command([take,R,Z]):-take_from_any(R,Z);true.
+command([take,R]):-take(R).
+command([take,R,from,Z]):-take_from_any(R,Z);true.
 
 %drop something
-command([drop,R]):-put(R);true.
-
-%put something to some destination
-command([put,A,B]):-put_to_any(A,B);true. 
+command([drop,R]):-writeln('Not implemented yet.').
 
 %use something
-command([use,R]):-use(R);true.
+command([use,R]):-writeln('Not implemented yet.').
+
+%move something
+command([move,R]):-writeln('Not implemented yet.').
+
+%enter code something
+command([enter,code,R]):-writeln('Not implemented yet.').
 
 %combine objects
-command([combine,A,B]):-combine(A,B);true.
+command([combine,A,B]):-writeln('Not implemented yet.').
 
 %examine something
-command([examine,R]):-examine_object(R);true.
+command([examine,R]):-examine_object(R).
 
 %show the map
 command([map]):-command([show,map]).
