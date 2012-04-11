@@ -635,7 +635,7 @@ command([help]) :-
   writeln('"show map" - Display the map.'), 
   tab, 
   writeln('"show inventoy" - Display the inventory.').
-command([go|[to, R]]) :-
+command([go, R]) :-
   goto(R);
   true.
 
