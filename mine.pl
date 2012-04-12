@@ -76,6 +76,12 @@ object_store(inventory).
 object_store(X) :-container(X).
 object_store(X) :-location(X).
 
+%message for blocked locations and objects
+blocked_message(desk) :-
+  writeln('You need a key to open the desk.'),
+  !.
+blocked_message(_).
+
 %init basic game info
 init_basic :-
   asserta(game_state(started)), 
@@ -233,20 +239,26 @@ print_possible_paths :-
 take(X) :-
   position(Z), 
   take_from_any(X, Z)->
-    true:
+    true;
   true.
 
 %take from any object store except the inventory 
+take_from_any(_,X) :- 
+  location(X),
+  not(position(X)),
+  writeln('Cannot take objects out of different locations!'),
+  !.
 take_from_any(_, X) :-
   blocked(X),
-  write('Cannot take from ')
+  write('Cannot take from '),
   write(X),
   writeln(', because it is blocked.'),
+  blocked_message(X),
   !.
 take_from_any(X, inventory) :-
   writeln('Cannot take something which is already in the inventory!'), 
  !.
-take_from_any(_, X) :-
+take_from_any(_, Z) :-
   not(container(Z)), 
   not(location(Z)), 
   write(Z), 
@@ -288,13 +300,13 @@ take_from_any(X, Z) :-
 put(X) :-
   position(Z), 
   put_to_any(X, Z)->
-    true:
+    true;
   true.
 
 %put to any position or container
 put_to_any(_, X) :- 
   blocked(X),
-  write('Cannot put to ')
+  write('Cannot put to '),
   write(X),
   writeln(',because it is blocked.'),
   !.
@@ -448,12 +460,12 @@ examine(Y) :-
   position(X), 
   contains(Y, X), 
   examine_object_list(Y)->
-    true:
+    true;
   true.
 examine(Y) :-
   inventory(Y), 
   examine_object_list(Y)->
-    true:
+    true;
   true.
 examine_object_list(Y) :-
   contains(Z, Y), 
