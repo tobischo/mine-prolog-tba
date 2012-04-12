@@ -86,7 +86,8 @@ blocked_message(_).
 init_basic :-
   asserta(game_state(started)), 
   asserta(position(tunnel4)), 
-  asserta(blocked(tunnel1, exit)).
+  asserta(blocked(tunnel1, exit)),
+  asserta(blocked_object(desk)).
 
 %initialize items
 init_items :-
@@ -249,8 +250,8 @@ take_from_any(_,X) :-
   writeln('Cannot take objects out of different locations!'),
   !.
 take_from_any(_, X) :-
-  blocked(X),
-  write('Cannot take from '),
+  blocked_object(X),
+  write('Cannot take from ')
   write(X),
   writeln(', because it is blocked.'),
   blocked_message(X),
@@ -305,8 +306,8 @@ put(X) :-
 
 %put to any position or container
 put_to_any(_, X) :- 
-  blocked(X),
-  write('Cannot put to '),
+  blocked_object(X),
+  write('Cannot put to ')
   write(X),
   writeln(',because it is blocked.'),
   !.
@@ -438,10 +439,10 @@ examine_object(Y) :-
   write(Y), 
   writeln(' is not reachable from here.'), 
   !.
-examine_object(Y) :-
-  blocked(Y),
+examine_object(X) :-
+  blocked_object(X),
   write('Cannot examine '),
-  write(Y),
+  write(X),
   writeln(', because it is blocked.'),
   !.
 examine_object(Y) :-
