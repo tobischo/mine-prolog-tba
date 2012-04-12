@@ -2,14 +2,12 @@
 
 %static configuration data
 %general object information
-object(fuse_cord).
 object(desk).
 object(map).
 object(flashlight).
 object(box).
 object(dynamite).
 object(pickaxe).
-object(fuse).
 object(mine_chariot).
 object(helmet).
 object(pouch).
@@ -18,8 +16,10 @@ object(key).
 object(shovel).
 object(bunch_of_rocks).
 object(railway_switch).
-object(usable_fuse).
-object(dynamite_with_fuse).
+object(fused_dynamite).
+object(fuse_cord).
+object(fuse).
+object(flute).
 
 %objects that can contain another object
 container(desk).
@@ -48,8 +48,7 @@ simpleConn(tunnel3, tunnel4).
 %takeable items
 takeable(fuse).
 takeable(fuse_cord).
-takeable(usable_fuse).
-takeable(dynamite_with_fuse).
+takeable(fused_dynamite).
 takeable(map).
 takeable(flashlight).
 takeable(pickaxe).
@@ -59,14 +58,16 @@ takeable(pouch).
 takeable(goldnuggets).
 takeable(key).
 takeable(shovel).
+takeable(flute).
 
 %usable items
-usable(dynamite_with_fuse).
+usable(fuse).
 usable(key).
+usable(flute).
 
 %combinable items
-combinable(dynamite, usable_fuse, dynamite_with_fuse).
-combinable(fuse, fuse_cord, usable_fuse).
+combinable(dynamite, fuse_cord, fused_dynamite).
+
 bothWayCombinable(X, Y, Z) :-combinable(X, Y, Z), 
   !.
 bothWayCombinable(X, Y, Z) :-combinable(Y, X, Z).
@@ -78,23 +79,35 @@ object_store(X) :-location(X).
 
 %message for blocked locations and objects
 blocked_message(desk) :-
-  writeln('You need a key to open the desk.'),
+  writeln('The desk is locked. You need a key to open the desk.'),
+  !.
+blocked_message(exit) :-
+  write('The way is blocked. You can smell'),
+  write(' the fresh air streaming in the tunnel. '),
+  writeln('Find a way to remove the stones.'), 
+  writeln('You shall not pass!'),
   !.
 blocked_message(_).
+
+%detailed block reason
+blocked_way_message(_,exit) :- 
+  blocked_message(exit).
+blocked_way_message(exit,_) :- 
+  blocked_message(exit).
 
 %init basic game info
 init_basic :-
   asserta(game_state(started)), 
-  asserta(position(tunnel4)), 
+  asserta(position(tunnel1)), 
   asserta(blocked(tunnel1, exit)),
   asserta(blocked_object(desk)).
 
 %initialize items
 init_items :-
   asserta(contains(flashlight, inventory)), 
-  asserta(contains(fuse_cord, break_chamber)), 
+  asserta(contains(fuse_cord, desk)), 
   asserta(contains(desk, break_chamber)), 
-  asserta(contains(map, tunnel4)), %todo restore to desk
+  asserta(contains(map, break_chamber)),
   asserta(contains(box, gold_vein_chamber)), 
   asserta(contains(dynamite, box)), 
   asserta(contains(pickaxe, gold_vein_chamber)), 
@@ -106,7 +119,14 @@ init_items :-
   asserta(contains(key, pouch)), 
   asserta(contains(shovel, tunnel4)), 
   asserta(contains(bunch_of_rocks, tunnel3)), 
-  asserta(contains(railway_switch, tunnel2)).
+  asserta(contains(flute, tunnel1)),
+  asserta(contains(railway_switch, tunnel2)),
+
+  %temp
+  asserta(contains(fuse, inventory)),
+  asserta(contains(dynamite, tunnel1)),
+  asserta(contains(fuse_cord, tunnel1)),
+  asserta(contains(fused_dynamite,tunnel1)).
 
 %easy access to the inventory
 inventory(X) :-
@@ -147,22 +167,22 @@ combine(X, Y) :-
 combine(X, Y) :-
   not(object(X)), 
   write(X), 
-  write(' is not an object.'), 
+  writeln(' is not an object.'), 
   !.
 combine(X, Y) :-
   not(object(Y)), 
   write(Y), 
-  write(' is not an object.'), 
+  writeln(' is not an object.'), 
   !.
 combine(X, Y) :-
   not(inventory(X)), 
   write(X), 
-  write(' is not in your inventory'), 
+  writeln(' is not in your inventory.'), 
   !.
 combine(X, Y) :-
   not(inventory(Y)), 
   write(Y), 
-  write(' is not in your inventory'), 
+  writeln(' is not in your inventory.'), 
   !.
 combine(X, Y) :-
   inventory(X), 
@@ -171,7 +191,8 @@ combine(X, Y) :-
   write('Cannot combine '), 
   write(X), 
   write(' and '), 
-  write(Y).
+  write(Y),
+  writeln('.').
 
 %print map
 printMap :-
@@ -251,9 +272,6 @@ take_from_any(_,X) :-
   !.
 take_from_any(_, X) :-
   blocked_object(X),
-  write('Cannot take from ')
-  write(X),
-  writeln(', because it is blocked.'),
   blocked_message(X),
   !.
 take_from_any(X, inventory) :-
@@ -304,17 +322,26 @@ put(X) :-
     true;
   true.
 
+put_message(fused_dynamite,Y) :-
+  location(Y),
+  writeln('Use the fuse in your inventory to blow the dynamite.'),!.
+
+put_message(X,Y) :-
+  write('Put '), 
+  write(X), 
+  write(' to '), 
+  write(Y), 
+  writeln('.'). 
+ 
 %put to any position or container
 put_to_any(_, X) :- 
   blocked_object(X),
-  write('Cannot put to ')
-  write(X),
-  writeln(',because it is blocked.'),
+  blocked_message(X),
   !.
-put_to_any(X, inventory) :-
-  not(inventory(X)), 
+put_to_any(X, _) :-
+  not(object(X)), 
   write(X), 
-  writeln(' is not in the inventory.'), 
+  writeln(' is not a valid object.'), 
   !.
 put_to_any(X, Y) :-
   not(container(Y)), 
@@ -333,11 +360,7 @@ put_to_any(X, Y) :-
   container(Y), 
   asserta(contains(X, Y)), 
   remove_from_inventory(X), 
-  write('Put '), 
-  write(X), 
-  write(' to '), 
-  write(Y), 
-  writeln('.'), 
+  put_message(X,Y),
   !.
 put_to_any(X, Y) :-
   not(position(Y)), 
@@ -347,11 +370,7 @@ put_to_any(X, Y) :-
   position(Y), 
   asserta(contains(X, Y)), 
   remove_from_inventory(X), 
-  write('Put '), 
-  write(X), 
-  write(' to '), 
-  write(Y), 
-  writeln('.'), 
+  put_message(X,Y),
   !.
 put_to_any(X, Y) :-
   write('Cannot place '), 
@@ -362,13 +381,11 @@ put_to_any(X, Y) :-
 use(X) :-
   not(object(X)), 
   write(X), 
-  writeln(' is not a valid object'), 
+  writeln(' is not a valid object.'), 
   !.
 use(X) :-
   not(usable(X)), 
-  write('Cannot use '), 
-  write(X), 
-  writeln('.'), 
+  write('I really don\'t know what to do with this thing!'), 
   !.
 use(X) :-
   not(inventory(X)), 
@@ -376,6 +393,100 @@ use(X) :-
   not(contains(X, Z)), 
   write(X), 
   writeln(' is not reachable from here.'), 
+  !.
+use(flute) :-
+  writeln('You\'re playing the most awesome melody ever!'),
+  !.
+
+%%%%%%%%%%fuse action
+
+use(fuse) :-
+  contains(fused_dynamite,Y),
+  location(Y),
+  position(Y),
+  retract(game_state(_)),
+  asserta(game_state(failed)),
+  writeln('Daaaaaaaaaaaaaamn, you blew yourself! ( ;) )'),
+  !.
+use(fuse) :-
+  contains(fused_dynamite,Y),
+  location(Y),
+  not(position(Y)),
+  Y \= tunnel1,
+  retractall(contains(_,Y)),
+  writeln('Wow, that was an explosion! But the exit is still blocked!'),
+  !.
+use(fuse) :-
+  contains(fused_dynamite,Y),
+  not(position(Y)),
+  Y = tunnel1,
+  retractall(contains(_,Y)),
+  writeln('Kabooooooooooom, what an explosion!'),
+  retract(blocked(tunnel1,exit)),
+  !.
+use(fuse) :-
+  writeln('Place the fused_dynamite in a room to be able to use the fuse!'),
+  !.
+
+%%%%%%%%%%%
+use(flashlight) :-
+  writeln('Wow, light!'),
+  !.
+%catch all: usable object, but needs something to use it on
+use(_) :-
+  writeln('You need something to apply this object on.').
+  
+
+%use an object onto another object
+use_on(X,_) :- 
+  not(object(X)),
+  write(X),
+  writeln(' is not a valid object'),
+  !.
+use_on(X,_) :- 
+  not(inventory(X)),
+  write(X),
+  writeln(' is not in your inventory.')
+  ,!.
+use_on(X,Y) :-
+  not(usable(X)),
+  write('I really don\'t know how to use '),
+  write(X),
+  write(' on '),
+  write(Y),
+  writeln('.'),
+  !.
+use_on(_,Y) :-
+  not(object(Y)),
+  write(Y),
+  writeln(' is not a valid object'),
+  !.
+use_on(X,Y) :- 
+  position(Z),
+  contains(Y,Z),
+  use_on_object(X,Y),
+  !.
+use_on(X,Y) :-
+  inventory(Y),
+  use_on_object(X,Y),
+  !.
+use_on(X,Y) :-
+  write(Y),
+  writeln(' is not reachable from here'),
+  !.
+
+
+use_on_object(key,desk) :-
+  retract(blocked_object(desk))->
+    writeln('Desk unlocked!');
+  writeln('Desk is already unlocked!').
+
+use_on_object(X,Y) :-
+  write('Don\'t know how to use '),
+  write(X),
+  write(' on '),
+  write(Y),
+  writeln('.'),
   !.
 
 %ignite the dynamite to remove the blockage
@@ -441,14 +552,12 @@ examine_object(Y) :-
   !.
 examine_object(X) :-
   blocked_object(X),
-  write('Cannot examine '),
-  write(X),
-  writeln(', because it is blocked.'),
+  blocked_message(X),
   !.
 examine_object(Y) :-
   not(container(Y)), 
   write(Y), 
-  writeln(' cannot contain anything.'), 
+  writeln(' is really a beautiful object!'), 
   !.
 examine_object(Y) :-
   contains(_, Y)->
@@ -489,17 +598,6 @@ way_blocked(X, Y) :-
 %movement rules
 movement_rule(X, Y) :-
   not(way_blocked(X, Y)).
-movement_rule(X, Y) :-
-  way_blocked(X, Y), 
-  blocked_reason(X, Y), 
-  fail.
-
-%detailed block reason
-blocked_reason(tunnel1, exit) :-
-  write('The way is blocked. You can smell'),
-  write(' the fresh air streaming in the tunnel. '),
-  writeln('Find a way to remove the stones.'), 
-  writeln('You shall not pass!').
 
 %two way movement rules
 mv_r(X, Y) :-
@@ -509,10 +607,11 @@ mv_r(X, Y) :-
 
 single_move(X, Y) :-
   connection(X, Y), 
-  mv_r(X, Y), 
-  writeln('changing the room'), 
-  retract(position(Y)), 
-  asserta(position(X)).
+  mv_r(X, Y)-> 
+    writeln('changing the room'), 
+    retract(position(X)), 
+    asserta(position(Y));
+  blocked_way_message(X,Y),fail.
 
 %move action
 goto(X) :-
@@ -526,11 +625,19 @@ goto(X) :-
   write('You cannot go to '), 
   write(X), 
   writeln(' directly.').
+goto(exit) :-
+  position(Y),
+  single_move(Y,exit)->
+    retract(game_state(_)),
+    asserta(game_state(won)),!;
+  !.
 goto(X) :-
   location(X), 
   position(Y), 
-  single_move(X, Y), 
-  print_pos.
+  single_move(Y,X)->
+    line,
+    print_pos,!;
+  !.
 
 %initialize Game
 start_game :-
@@ -539,19 +646,23 @@ start_game :-
 
 %restart the game
 restart_game :-
-  retract(game_state(_)), 
-  retract(position(_)), 
-  retract(blocked(_, _)), 
-  retract(contains(_, _)), 
+  (retractall(game_state(_));true), 
+  (retractall(position(_));true), 
+  (retractall(blocked(_, _));true), 
+  (retractall(contains(_, _));true),
+  (retractall(blocked_object(_));true), 
   start_game.
 
 %main loop
 start_interactive_mode :-
-  repeat, 
+  repeat,
+    line,
     read_command(Y), 
+    line,
     process_command(Y), 
-    game_state(finished), 
-    print_end_message, 
+    ((game_state(end),print_end_message);
+    (game_state(failed),print_fail_message);
+    (game_state(won),print_success_message)),
   halt.
 
 %process a command
@@ -609,9 +720,13 @@ ignored_word('onto').
 ignored_word('out').
 ignored_word('of').
 ignored_word('from').
+ignored_word('on').
+ignored_word('with').
 
 %end the game
 command([stop]) :-
+  command([end]).
+command([exit]) :-
   command([end]).
 command([quit]) :-
   command([end]).
@@ -619,7 +734,7 @@ command([halt]) :-
   command([end]).
 command([end]) :-
   retract(game_state(_)), 
-  asserta(game_state(finished)).
+  asserta(game_state(end)).
 
 %reload the file - for debugging
 command([reload]) :-
@@ -702,6 +817,10 @@ command([put, A, B]) :-
 command([use, R]) :-
   use(R);
   true.
+%use something on something
+command([use,A,B]) :-
+  use_on(A,B);
+  true.
 
 %combine objects
 command([combine, A, B]) :-
@@ -728,9 +847,20 @@ command(['inventory']) :-
 command([show, 'inventory']) :-
   print_inventory.
 
-tab :-writef('\t').
+tab :-
+  writef('\t').
+
+print_fail_message :-
+  writeln('GAME OVER!!!! Please come again!').
+
 print_end_message :-
   writeln('End of game. Thank you for playing!').
+
+print_success_message :-
+  writeln('DAAAAMN, you WON!!!! You are a REAL HERO!!! BRACE YOURSELF!!!!').
+
+line :- 
+  writeln('---------------------------------------------------------------------------'). 
 
 %read in the user command
 read_command(Y) :-
