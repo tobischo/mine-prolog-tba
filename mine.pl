@@ -237,6 +237,12 @@ take(X) :-
   true.
 
 %take from any object store except the inventory 
+take_from_any(_, X) :-
+  blocked(X),
+  write('Cannot take from ')
+  write(X),
+  writeln(', because it is blocked.'),
+  !.
 take_from_any(X, inventory) :-
   writeln('Cannot take something which is already in the inventory!'), 
  !.
@@ -286,6 +292,12 @@ put(X) :-
   true.
 
 %put to any position or container
+put_to_any(_, X) :- 
+  blocked(X),
+  write('Cannot put to ')
+  write(X),
+  writeln(',because it is blocked.'),
+  !.
 put_to_any(X, inventory) :-
   not(inventory(X)), 
   write(X), 
@@ -413,6 +425,12 @@ examine_object(Y) :-
   not(contains(Y, Z)), 
   write(Y), 
   writeln(' is not reachable from here.'), 
+  !.
+examine_object(Y) :-
+  blocked(Y),
+  write('Cannot examine '),
+  write(Y),
+  writeln(', because it is blocked.'),
   !.
 examine_object(Y) :-
   not(container(Y)), 
