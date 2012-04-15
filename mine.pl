@@ -65,6 +65,7 @@ usable(fuse).
 usable(key).
 usable(flute).
 usable(railway_switch).
+usable(flashlight).
 
 %combinable items
 combinable(dynamite, fuse_cord, fused_dynamite).
@@ -98,6 +99,7 @@ blocked_way_message(exit, _) :-
 
 %init basic game info
 init_basic :-
+  asserta(light_state(off)),
   asserta(game_state(started)), 
   asserta(position(tunnel1)), 
   asserta(blocked(tunnel1, exit)), 
@@ -121,28 +123,34 @@ init_items :-
   asserta(contains(shovel, tunnel4)), 
   asserta(contains(bunch_of_rocks, tunnel3)), 
   asserta(contains(flute, tunnel1)), 
-  asserta(contains(railway_switch, tunnel2)), 
-
-  %temp
-  asserta(contains(fuse, inventory)), 
-  asserta(contains(dynamite, tunnel1)), 
-  asserta(contains(fuse_cord, tunnel1)), 
-  asserta(contains(fused_dynamite, tunnel1)).
+  asserta(contains(railway_switch, tunnel2)). 
 
 %easy access to the inventory
 inventory(X) :-
   contains(X, inventory).
 
+%add something to the inventory
 add_to_inventory(X) :-
   asserta(contains(X, inventory)), 
   write(X), 
   writeln(' was added to the inventory.').
 
+%remove something from the inventory
+
 remove_from_inventory(X) :-
+  remove_from_inventory_action(X),
   retract(contains(X, inventory)), 
   write(X), 
   writeln(' was removed from the inventory.').
 
+%light will be turned of when removed from inventory
+remove_from_inventory_action(flashlight):-
+  set_light_state(off),
+  !.
+%catch-all for objects without an action
+remove_from_inventory_action(_).
+
+%print the content of the inventory
 print_inventory :-
   inventory(_)->
     (writeln('Your inventory contains:'), 
@@ -155,6 +163,16 @@ print_inventory_list :-
   tab, 
   writeln(X), 
   fail.
+
+%update the game state
+set_game_state(X) :- 
+  retractall(game_state(_)),
+  asserta(game_state(X)).
+
+%update the flashlight state
+set_light_state(X) :-
+  retractall(light_state(_)),
+  asserta(light_state(X)).
 
 %combine two items and add the result to the inventar
 combine(X, Y) :-
@@ -226,6 +244,7 @@ init :-
 
 %start text
 init_text :-
+  line,
   write('You are exploring an old mine.'), 
   nl, 
   write('A sudden tremor occured and some rocks are falling down.'), 
@@ -234,21 +253,29 @@ init_text :-
   nl, 
   nl, 
   write('It is blocked.'), 
-  nl, 
+  nl,
+  line,
   print_pos->
     true;
   true.
 
 %print position and possible ways
 print_pos :-
+  light_state(L),
+  print_position(L).
+
+print_position(on) :-
   position(X), 
   write('You are in '), 
   write(X), 
   write('.'), 
   nl, 
-  print_possible_paths->
-    true;
-  true.
+  print_possible_paths;
+    true.
+
+print_position(off) :-
+  light_state(off),
+  writeln('It is pitch dark in here. You can\'t see anything.').
 
 print_possible_paths :-
   position(X), 
@@ -404,15 +431,14 @@ use(flute) :-
   writeln('You\'re playing the most awesome melody ever!'), 
   !.
 use(railway_switch) :-
-  writeln('It\'s not moving.'),
+  writeln('Your trying the best you can but it won\'t move.'),
   !.
 %%%%%%%%%%fuse action
 use(fuse) :-
   contains(fused_dynamite, Y), 
   location(Y), 
   position(Y), 
-  retract(game_state(_)), 
-  asserta(game_state(failed)), 
+  set_game_state(failed),
   writeln('Daaaaaaaaaaaaaamn, you blew yourself! ( ;) )'), 
   !.
 use(fuse) :-
@@ -420,6 +446,7 @@ use(fuse) :-
   location(Y), 
   not(position(Y)), 
   Y \= tunnel1, 
+  %remove all objects in the room
   retractall(contains(_, Y)),
   writeln('Wow, that was an explosion! But the exit is still blocked!'), 
   !.
@@ -435,9 +462,15 @@ use(fuse) :-
   writeln('Place the fused_dynamite in a room to be able to use the fuse!'), 
   !.
 %%%%%%%%%%%
+
+%flashlight will only be usable in the inventory
 use(flashlight) :-
-  writeln('Wow, light!'), 
-  !.
+  inventory(flashlight)->
+    writeln('Wow, light!'), 
+    set_light_state(on),
+    !;
+  writeln('The flashlight needs to be in your inventory to use it!').
+
 %catch all: usable object, but needs something to use it on
 use(_) :-
   writeln('You need something to apply this object on.').
@@ -495,12 +528,19 @@ use_on_object(X, Y) :-
 
 %look around
 look_around :-
+  light_state(L),
+  look_around_ext(L).
+
+look_around_ext(on) :-
   position(X), 
   contains(_, X)->
     writeln('You can see:'), 
     print_viewable_objects;
   writeln('Nothing in here!'), 
   true.
+
+look_around_ext(off) :-
+  writeln('Still dark. Can\'t see a thing!').
 
 print_viewable_objects :-
   position(X), 
@@ -528,6 +568,7 @@ examine_object(X) :-
   !.
 examine_object(Y) :-
   not(container(Y)), 
+  write('The '),
   write(Y), 
   writeln(' is really a beautiful object!'), 
   !.
@@ -605,8 +646,7 @@ goto(X) :-
 goto(exit) :-
   position(Y), 
   single_move(Y, exit)->
-    retract(game_state(_)), 
-    asserta(game_state(won)), 
+    set_game_state(won),
     !;
   !.
 goto(X) :-
@@ -630,6 +670,7 @@ restart_game :-
   (retractall(blocked(_, _));true), 
   (retractall(contains(_, _));true), 
   (retractall(blocked_object(_));true), 
+  (retractall(light_state(_));true),
   start_game.
 
 %main loop
@@ -644,6 +685,11 @@ start_interactive_mode :-
     (game_state(won), print_success_message)), 
   halt.
 
+%read in the user command
+read_command(Y) :-
+  write('--> '), 
+  readln(Y).
+
 %process a command
 process_command(Y) :-
   preprocess_command(Y, Z), 
@@ -654,9 +700,9 @@ process_command(Y) :-
 %preprocess the command
 preprocess_command(A, B) :-
   command_lowercase(A, T), 
-  command_clean(T, B), 
-  write('Processed command: '), 
-  writeln(B).
+  command_clean(T, B). 
+  %write('Processed command: '), 
+  %writeln(B).
 
 %convert words to lower case
 command_lowercase([], []).
@@ -708,14 +754,13 @@ command([quit]) :-
 command([halt]) :-
   command([end]).
 command([end]) :-
-  retract(game_state(_)), 
-  asserta(game_state(end)).
+  set_game_state(end).
 
 %reload the file - for debugging
-command([reload]) :-
-  writeln('Reloading file "mine.pl"'), 
-  consult(mine), 
-  restart_game.
+%command([reload]) :-
+%  writeln('Reloading file "mine.pl"'), 
+%  consult(mine), 
+%  restart_game.
 
 %restart the game
 command([restart]) :-
@@ -735,8 +780,8 @@ command([help]) :-
   tab, 
   writeln('"look around" - Take a look around.'), 
   tab, 
-  writeln('"reload" - Reload the file (debugging purpose)'), 
-  tab, 
+  %writeln('"reload" - Reload the file (debugging purpose)'), 
+  %tab, 
   writeln('"restart" - Restart the game'), 
   tab, 
   writeln('"take X" - Take something'), 
@@ -784,6 +829,9 @@ command([drop, R]) :-
   true.
 
 %put something to some destination
+command([put,A,inventory]) :-
+  take(A),
+  !.
 command([put, A, B]) :-
   put_to_any(A, B);
   true. 
@@ -792,6 +840,7 @@ command([put, A, B]) :-
 command([use, R]) :-
   use(R);
   true.
+
 %use something on something
 command([use, A, B]) :-
   use_on(A, B);
@@ -813,7 +862,10 @@ command([map]) :-
 command([show, map]) :-
   inventory(map)->
     printMap;
-  writeln('Hard to show a non-existing map. Use your imagination!'), 
+  (light_state(on)->
+    writeln('Hard to show a non-existing map. Use your imagination!');
+    writeln('Can\'t even see my own hands!') 
+  ),
   true.
 
 %show the inventory
@@ -836,17 +888,3 @@ print_success_message :-
 
 line :- 
   writeln('---------------------------------------------------------------------------'). 
-
-%read in the user command
-read_command(Y) :-
-  write('--> '), 
-  readln(Y).
-
-% Alles für die Katz :(
-%read_word_list(Y) :-read_word(W)->read_word_list(L), append([W], L, Y), Y == [].
-%read a word which contains more than one character
-%read_word(W) :-read_char_list([], Y), length(Y, L), L =\= 0, writeln(Y), atom_chars(W, Y).
-%read a list of chars until a space is found
-%read_char_list(X, Y) :-read_char(C), C =\= 32->append(X, [C], Y2), read_char_list(Y2, Y);X = Y.
-%read a char which is not the end of the string
-%read_char(Y) :-get0(Y), Y =\= 10.
