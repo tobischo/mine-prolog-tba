@@ -1,5 +1,34 @@
-%(c) David Hildenbrand, Tobias Schoknecht
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% (c) David Hildenbrand, Tobias Schoknecht
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This is a text-based adventure game.
+% The game is set within an old mine whose exit
+% collapsed due to a tremor.
+%
+% The task in the game is to find objects
+% which may help to find a way to leave the
+% mine.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Code structure
+% - Static configuration data
+% - Initialization code
+% - Game logic
+%   - Game state actions
+%   - Inventory actions
+%   - Item combination rules
+%   - Take action
+%   - Put/Drop action
+%   - Use actions
+%   - Look action
+%   - Examine action
+%   - Movement and connection
+%   - Position actions
+%   - Blocked messages
+%   - Game state messages
+% - (Re)Start Game code
+% - Command processing
+%   - Commands
+% - Output formatting helper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Static configuration data                     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -87,7 +116,7 @@ object_store(X) :-
   location(X).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Init game
+% Initialization code
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %init
 init :-
@@ -141,9 +170,9 @@ init_items :-
   asserta(contains(railway_switch, tunnel2)). 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Game rules
+% Game logic
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Change Game state
+% Game state actions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Update the game state
 set_game_state(X) :- 
@@ -570,17 +599,17 @@ connection(X, Y) :-
 connection(X, Y) :-
   simpleConn(Y, X).
 
-%two way block check
+% Two way block check
 way_blocked(X, Y) :-
   blocked(X, Y).
 way_blocked(X, Y) :-
   blocked(Y, X).
 
-%movement rules
+% Movement rules
 movement_rule(X, Y) :-
   not(way_blocked(X, Y)).
 
-%two way movement rules
+% Two way movement rules
 mv_r(X, Y) :-
   movement_rule(X, Y).
 mv_r(X, Y) :-
@@ -594,7 +623,7 @@ single_move(X, Y) :-
     asserta(position(Y));
   blocked_way_message(X, Y), fail.
 
-%move action
+% Move action
 goto(X) :-
   not(location(X)), 
   write(X), 
@@ -629,7 +658,7 @@ goto(X) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Position actions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%print map
+% Print map
 printMap :-
   writeln('   /--------------|--------------------------|------'), 
   writeln('  / break_chamber |      tunnel1             | exit'), 
@@ -679,7 +708,7 @@ print_possible_paths :-
   fail.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Blocked message
+% Blocked messages
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Message for blocked locations and objects
 blocked_message(desk) :-
@@ -712,7 +741,7 @@ print_success_message :-
   writeln('DAAAAMN, you WON!!!! You are a REAL HERO!!! BRACE YOURSELF!!!!'). 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% (Re)Start game
+% (Re)Start Game code
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Initialize Game
 start_game :-
