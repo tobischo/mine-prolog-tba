@@ -70,14 +70,18 @@ usable(flashlight).
 %combinable items
 combinable(dynamite, fuse_cord, fused_dynamite).
 
-bothWayCombinable(X, Y, Z) :-combinable(X, Y, Z), 
+bothWayCombinable(X, Y, Z) :-
+  combinable(X, Y, Z), 
   !.
-bothWayCombinable(X, Y, Z) :-combinable(Y, X, Z).
+bothWayCombinable(X, Y, Z) :-
+  combinable(Y, X, Z).
 
 %object stores are containers, locations and inventory
 object_store(inventory).
-object_store(X) :-container(X).
-object_store(X) :-location(X).
+object_store(X) :-
+  container(X).
+object_store(X) :-
+  location(X).
 
 %message for blocked locations and objects
 blocked_message(desk) :-
