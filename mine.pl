@@ -93,7 +93,7 @@ takeable(pickaxe).
 takeable(dynamite).
 takeable(helmet).
 takeable(pouch).
-takeable(goldnuggets).
+takeable(goldnugget).
 takeable(key).
 takeable(shovel).
 takeable(flute).
