@@ -1,0 +1,14 @@
+(c) David Hildenbrand, Tobias Schoknecht
+
+----------------------------------------------------------------------------
+"THE BEER-WARE LICENSE" (Revision 42):
+david.hildenbrand@gmail.com and tobias.schoknecht@gmail.com wrote this file.
+As long as you retain this notice you can do whatever you want with this
+stuff. If we meet some day, and you think this stuff is worth it, you can
+buy us a beer in return David Hildenbrand, Tobias Schoknecht
+----------------------------------------------------------------------------
+
+This is a text-based adventure game.
+The game is set within an old mine whose exit collapsed due to a tremor.
+
+The task in the game is to find objects which may help to find a way to leave the mine.

@@ -1,5 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % (c) David Hildenbrand, Tobias Schoknecht
+% ----------------------------------------------------------------------------
+% "THE BEER-WARE LICENSE" (Revision 42):
+% david.hildenbrand@gmail.com and tobias.schoknecht@gmail.com wrote this file.
+% As long as you retain this notice you can do whatever you want with this
+% stuff. If we meet some day, and you think this stuff is worth it, you can
+% buy us a beer in return David Hildenbrand, Tobias Schoknecht
+% ----------------------------------------------------------------------------
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This is a text-based adventure game.
 % The game is set within an old mine whose exit
@@ -573,17 +580,17 @@ examine_object(Y) :-
     examine(Y);
   write(Y), 
   writeln(' is empty.').
+
+examine(Y) :-
+  inventory(Y),
+  examine_object_list(Y),
+  !.
 examine(Y) :-
   position(X), 
-  contains(Y, X), 
-  examine_object_list(Y)->
-    true;
-  true.
-examine(Y) :-
-  inventory(Y), 
-  examine_object_list(Y)->
-    true;
-  true.
+  contains(Y, X),
+  examine_object_list(Y),
+  !.
+
 examine_object_list(Y) :-
   contains(Z, Y), 
   tab, 
